@@ -1,0 +1,1 @@
+1. Binance 4xx and 5xx exception handler
