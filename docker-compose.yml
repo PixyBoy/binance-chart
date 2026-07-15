@@ -41,6 +41,8 @@ services:
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
       - ./docker/timescaledb/init:/docker-entrypoint-initdb.d
+    networks:
+    - monitoring
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 5s
@@ -54,6 +56,8 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+    - monitoring
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
