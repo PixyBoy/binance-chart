@@ -14,7 +14,8 @@ ENV NODE_ENV=development
 RUN pnpm install --frozen-lockfile || pnpm install
 COPY apps/backend ./apps/backend
 RUN pnpm --filter @trading-backend/exchange-adapters build
-RUN pnpm --filter backend exec prisma generate
+RUN pnpm install --no-frozen-lockfile
+RUN npx prisma@5.22.0 generate --schema=./apps/backend/prisma/schema.prisma
 # Business source is bind-mounted in docker-compose.yml for dev; this COPY
 # only makes the image self-sufficient if it's ever run standalone.
 CMD ["pnpm", "--filter", "backend", "start:dev"]
@@ -25,7 +26,7 @@ ENV NODE_ENV=production
 RUN pnpm install --frozen-lockfile || pnpm install
 COPY apps/backend ./apps/backend
 RUN pnpm --filter @trading-backend/exchange-adapters build
-RUN pnpm --filter backend exec prisma generate
+RUN pnpm install --no-frozen-lockfile && ./apps/backend/node_modules/.bin/prisma generate
 RUN pnpm --filter backend build
 
 # ---------- Production ----------

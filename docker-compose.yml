@@ -19,7 +19,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "pnpm --filter backend exec prisma migrate deploy && pnpm --filter backend start:dev"
+    command: sh -c "npx prisma migrate deploy && pnpm --filter backend start:dev"
 
   timescaledb:
     image: timescale/timescaledb:latest-pg16
