@@ -141,7 +141,10 @@ export class KlineStreamConsumerService
         await this.handleEntry(id, fields);
       }
     } catch (err) {
-      this.logger.error('Failed to reclaim stale pending entries', err as Error);
+      this.logger.error(
+        'Failed to reclaim stale pending entries',
+        err as Error,
+      );
     }
   }
 }
