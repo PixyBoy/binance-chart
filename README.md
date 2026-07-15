@@ -60,3 +60,11 @@ touching the server.
 Fase 1: Exchange adapter interface, BinanceAdapter, 1m kline ingestion for
 BTCUSDT/ETHUSDT/BNBUSDT, TimescaleDB storage with continuous aggregates for
 higher timeframes, unit tests alongside each piece.
+
+Fase 2: Durable Redis Stream buffer between ingestion and persistence
+(`KlineBufferService` -> `KlineStreamConsumerService`), so a slow/failing
+DB write never blocks the Binance connection or loses data. Exponential
+backoff on reconnect. `GapFillService` automatically backfills any gap
+between the last persisted candle and now whenever the connection is
+restored, using the exact same durable path as live data — zero data
+loss across a disconnect, as required. 23 unit tests covering all of it.
