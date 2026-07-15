@@ -1,0 +1,16 @@
+{
+  "name": "trading-backend-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "docker compose up",
+    "build": "pnpm --filter @trading-backend/exchange-adapters build && pnpm --filter backend build",
+    "lint": "pnpm --filter backend lint",
+    "test": "pnpm --filter @trading-backend/exchange-adapters test && pnpm --filter backend test",
+    "prisma:generate": "pnpm --filter backend exec prisma generate",
+    "prisma:migrate": "pnpm --filter backend exec prisma migrate dev"
+  }
+}

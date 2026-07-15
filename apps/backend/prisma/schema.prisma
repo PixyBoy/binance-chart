@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Fase 1 models. Prisma manages this table's columns/indexes normally.
+// Turning it into a TimescaleDB hypertable and creating Continuous
+// Aggregates for higher timeframes is done in a hand-written raw-SQL
+// migration (see prisma/migrations/.../migration.sql), NOT here — Prisma
+// has no native concept of hypertables, so we let it manage the plain
+// table shape and layer Timescale-specific DDL on top via raw SQL.
+// ---------------------------------------------------------------------------
+
+enum MarketType {
+  spot
+  futures
+}
+
+/// Base-resolution (1m) candles. This is the single source of truth;
+/// every other timeframe is derived from this table via Continuous
+/// Aggregates, never stored redundantly by the application itself.
+model Kline1m {
+  exchange   String
+  marketType MarketType
+  symbol     String
+  openTime   DateTime
+  closeTime  DateTime
+  open       String
+  high       String
+  low        String
+  close      String
+  volume     String
+  isClosed   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  // Composite primary key: one row per symbol per minute per exchange.
+  // openTime must be part of the key for TimescaleDB hypertable partitioning.
+  @@id([exchange, marketType, symbol, openTime])
+  @@index([symbol, openTime])
+  @@map("kline_1m")
+}
+
+/// Tracks the last successfully ingested candle per symbol, used purely
+/// for gap detection after a reconnect (see Fase 2).
+model IngestionCursor {
+  exchange       String
+  marketType     MarketType
+  symbol         String
+  lastCloseTime  DateTime
+  updatedAt      DateTime @updatedAt
+
+  @@id([exchange, marketType, symbol])
+  @@map("ingestion_cursor")
+}

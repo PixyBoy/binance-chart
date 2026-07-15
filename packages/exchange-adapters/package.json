@@ -1,0 +1,20 @@
+{
+  "name": "@trading-backend/exchange-adapters",
+  "version": "1.0.0",
+  "description": "Exchange abstraction layer (IExchangeAdapter interface + implementations, starting with Binance)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "29",
+    "jest": "29",
+    "ts-jest": "29",
+    "typescript": "5"
+  }
+}

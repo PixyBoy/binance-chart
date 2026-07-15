@@ -1,1 +1,8 @@
-1. Binance 4xx and 5xx exception handler
+TimescaleDB => source of truth (different schema)
+Redis => latest details (latest prices, latest candle for interval)
+NestJS => Framework
+Message broker => RABBITMQ OR KAFKA
+Communication between services => gRPC
+Monitoring => Grafana and Prometheus
+
+TradingView Datafeed API / UDF adaptor

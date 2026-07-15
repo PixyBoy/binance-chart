@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: "trading-backend-dashboards"
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      # TODO: drop exported dashboard JSON files here in Fase 5
+      path: /etc/grafana/provisioning/dashboards

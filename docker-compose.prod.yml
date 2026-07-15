@@ -1,0 +1,45 @@
+name: trading-backend-prod
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: production
+    # TODO: replace 'build' above with 'image: ghcr.io/<org>/<repo>-backend:<tag>'
+    # once CI is pushing images — production should pull, not build, on the server.
+    env_file:
+      - .env
+    volumes: []
+    restart: unless-stopped
+    command: sh -c "node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node dist/main.js"
+
+  timescaledb:
+    restart: always
+    ports: []
+
+  redis:
+    restart: always
+    ports: []
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    volumes:
+      - ./docker/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      # TODO: mount certbot cert/key volumes here once SSL is configured
+      # - ./docker/certbot/conf:/etc/letsencrypt:ro
+      # - ./docker/certbot/www:/var/www/certbot:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+
+  grafana:
+    restart: always
+    ports: []
+
+  prometheus:
+    restart: always
+    ports: []

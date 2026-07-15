@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "trading-backend"
+    static_configs:
+      # TODO: this expects the NestJS app to expose /metrics (Fase 5)
+      - targets: ["backend:3000"]
