@@ -2,6 +2,7 @@
 
 # ---------- Base ----------
 FROM node:22-alpine AS base
+RUN apk add --no-cache postgresql-client
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
@@ -31,6 +32,7 @@ RUN pnpm --filter backend build
 
 # ---------- Production ----------
 FROM node:22-alpine AS production
+RUN apk add --no-cache postgresql-client
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /app
 ENV NODE_ENV=production

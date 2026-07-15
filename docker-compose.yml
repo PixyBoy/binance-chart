@@ -19,7 +19,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && pnpm --filter backend start:dev"
+    command: sh -c "npx prisma migrate deploy --schema=apps/backend/prisma/schema.prisma && psql \"$DATABASE_URL\" -f apps/backend/prisma/migrations/20260715000002_timescale_hypertable_and_aggregates/continuous_aggregates.sql && pnpm --filter backend start:dev"
 
   timescaledb:
     image: timescale/timescaledb:latest-pg16

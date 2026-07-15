@@ -12,7 +12,7 @@ services:
       - .env
     volumes: []
     restart: unless-stopped
-    command: sh -c "node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node dist/main.js"
+    command: sh -c "node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && psql \"$DATABASE_URL\" -f prisma/migrations/20260715000002_timescale_hypertable_and_aggregates/continuous_aggregates.sql && node dist/main.js"
 
   timescaledb:
     restart: always
