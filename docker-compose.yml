@@ -14,6 +14,8 @@ services:
       - ./apps/backend:/app/apps/backend
       - ./packages:/app/packages
       - /app/apps/backend/node_modules
+    networks:
+      - monitoring
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -57,6 +59,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    environment:
+      - REDIS_ADDR=redis://${REDIS_HOST:-redis}:6379
+    ports:
+      - "9121:9121"
 
   prometheus:
     image: prom/prometheus:latest
@@ -64,6 +72,8 @@ services:
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    networks:
+      - monitoring
     ports:
       - "9090:9090"
 
@@ -76,11 +86,15 @@ services:
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
+    networks:
+    - monitoring
     ports:
       - "3001:3000"
     depends_on:
       - prometheus
 
+networks:
+  monitoring:
 volumes:
   timescaledb_data:
   redis_data:

@@ -8,3 +8,6 @@ scrape_configs:
     static_configs:
       # TODO: this expects the NestJS app to expose /metrics
       - targets: ["backend:3000"]
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
