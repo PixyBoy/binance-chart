@@ -1,0 +1,4 @@
+# Download and use as context
+curl -s https://developers.binance.com/en/docs/llms.txt
+# Full documentation for comprehensive context
+curl -s https://developers.binance.com/en/docs/llms-full.txt
