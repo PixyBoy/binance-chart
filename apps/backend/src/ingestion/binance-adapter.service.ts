@@ -5,6 +5,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import WebSocket from 'ws';
 import type {
   IExchangeAdapter,
@@ -14,6 +15,18 @@ import type {
   SymbolInfo,
 } from '@trading-backend/exchange-adapters';
 import type { EnvConfig } from '../common/config/env.schema';
+
+/** Emitted whenever the live stream connection drops, per marketType+symbols group. */
+export const BINANCE_DISCONNECTED_EVENT = 'binance.disconnected';
+/** Emitted when the connection is (re-)established, including the very first connect. */
+export const BINANCE_RECONNECTED_EVENT = 'binance.reconnected';
+
+export interface BinanceConnectionEventPayload {
+  marketType: StreamSubscription['marketType'];
+  symbols: string[];
+  /** True if this is a reconnect after a drop, false for the first-ever connect. */
+  wasReconnect: boolean;
+}
 
 /**
  * Binance implementation of IExchangeAdapter. This is the ONLY file in the
@@ -30,6 +43,9 @@ export class BinanceAdapterService
   private readonly logger = new Logger(BinanceAdapterService.name);
   private ws: WebSocket | null = null;
   private connected = false;
+  private everConnected = false;
+  private reconnectAttempt = 0;
+  private manuallyClosed = false;
   private rateLimitState: RateLimitState = {
     exchange: this.exchangeId,
     usedWeight: 0,
@@ -37,7 +53,10 @@ export class BinanceAdapterService
     windowResetAt: new Date(Date.now() + 60_000),
   };
 
-  constructor(private readonly config: ConfigService<EnvConfig>) {}
+  constructor(
+    private readonly config: ConfigService<EnvConfig>,
+    private readonly events: EventEmitter2,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     // Actual stream connection is started explicitly by KlineIngestionService
@@ -58,6 +77,7 @@ export class BinanceAdapterService
   }
 
   async disconnect(): Promise<void> {
+    this.manuallyClosed = true;
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -83,13 +103,31 @@ export class BinanceAdapterService
     const queue: MarketEvent[] = [];
     let resolveNext: (() => void) | null = null;
 
+    // Exponential backoff, capped at 30s, so a prolonged Binance outage
+    // doesn't hammer their servers with reconnect attempts.
+    const maxBackoffMs = 30_000;
+    const nextBackoffMs = () =>
+      Math.min(1000 * 2 ** this.reconnectAttempt, maxBackoffMs);
+
     const connect = () => {
       this.logger.log(`Connecting to Binance stream: ${url}`);
       this.ws = new WebSocket(url);
 
       this.ws.on('open', () => {
         this.connected = true;
-        this.logger.log('Binance WebSocket connected');
+        const wasReconnect = this.everConnected;
+        this.everConnected = true;
+        this.reconnectAttempt = 0;
+        this.logger.log(
+          wasReconnect
+            ? 'Binance WebSocket reconnected'
+            : 'Binance WebSocket connected',
+        );
+        this.events.emit(BINANCE_RECONNECTED_EVENT, {
+          marketType: subscription.marketType,
+          symbols: subscription.symbols,
+          wasReconnect,
+        } satisfies BinanceConnectionEventPayload);
       });
 
       this.ws.on('message', (raw: Buffer) => {
@@ -109,9 +147,27 @@ export class BinanceAdapterService
       });
 
       this.ws.on('close', () => {
+        const wasConnected = this.connected;
         this.connected = false;
-        this.logger.warn('Binance WebSocket disconnected, reconnecting in 2s');
-        setTimeout(connect, 2000);
+
+        if (this.manuallyClosed) {
+          return; // graceful shutdown, no reconnect
+        }
+
+        if (wasConnected) {
+          this.events.emit(BINANCE_DISCONNECTED_EVENT, {
+            marketType: subscription.marketType,
+            symbols: subscription.symbols,
+            wasReconnect: false,
+          } satisfies BinanceConnectionEventPayload);
+        }
+
+        const delay = nextBackoffMs();
+        this.reconnectAttempt += 1;
+        this.logger.warn(
+          `Binance WebSocket disconnected, reconnecting in ${delay}ms (attempt ${this.reconnectAttempt})`,
+        );
+        setTimeout(connect, delay);
       });
 
       this.ws.on('error', (err) => {

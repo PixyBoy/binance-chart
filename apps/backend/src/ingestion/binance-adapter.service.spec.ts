@@ -1,5 +1,35 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
+// Fake WebSocket: a tiny event emitter with the subset of the `ws` API this
+// adapter uses, so connectStream() can be driven without a real network
+// connection. jest.mock calls are hoisted above imports, so every import of
+// 'ws' anywhere in this file (including inside binance-adapter.service.ts)
+// resolves to this fake.
+class FakeWebSocket {
+  static instances: FakeWebSocket[] = [];
+  listeners: Record<string, Array<(...args: any[]) => void>> = {};
+  constructor(_url: string) {
+    FakeWebSocket.instances.push(this);
+  }
+  on(event: string, cb: (...args: any[]) => void) {
+    (this.listeners[event] ??= []).push(cb);
+    return this;
+  }
+  close() {
+    this.emit('close');
+  }
+  emit(event: string, ...args: any[]) {
+    (this.listeners[event] ?? []).forEach((cb) => cb(...args));
+  }
+}
+
+jest.mock('ws', () => ({
+  __esModule: true,
+  default: FakeWebSocket,
+}));
+
 import { BinanceAdapterService } from './binance-adapter.service';
 
 describe('BinanceAdapterService', () => {
@@ -20,6 +50,7 @@ describe('BinanceAdapterService', () => {
       providers: [
         BinanceAdapterService,
         { provide: ConfigService, useValue: configServiceMock },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 
@@ -110,5 +141,52 @@ describe('BinanceAdapterService', () => {
     await service.fetchExchangeInfo('spot');
 
     expect(service.getRateLimitState().usedWeight).toBe(42);
+  });
+
+  describe('connectStream reconnect events', () => {
+    it('emits reconnected(wasReconnect=false) on first connect, then disconnected after a drop', async () => {
+      const emitSpy = jest.fn();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          BinanceAdapterService,
+          { provide: ConfigService, useValue: configServiceMock },
+          { provide: EventEmitter2, useValue: { emit: emitSpy } },
+        ],
+      }).compile();
+
+      const freshService = module.get(BinanceAdapterService);
+
+      const iterator = freshService
+        .connectStream({
+          marketType: 'spot',
+          symbols: ['BTCUSDT'],
+          channels: ['kline_1m'],
+        })
+        [Symbol.asyncIterator]();
+      // Async generators don't execute any body code until .next() is
+      // called for the first time. We don't await the returned promise
+      // (it only resolves once a kline event is queued) — we just need
+      // the synchronous prefix (connect() + listener registration) to run.
+      void iterator.next();
+
+      // Give the generator a tick to call connect() and register listeners.
+      await new Promise((r) => setImmediate(r));
+
+      const ws = FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
+      ws.emit('open');
+
+      expect(emitSpy).toHaveBeenCalledWith(
+        'binance.reconnected',
+        expect.objectContaining({ wasReconnect: false }),
+      );
+
+      ws.emit('close'); // simulate a drop
+      await new Promise((r) => setImmediate(r));
+
+      expect(emitSpy).toHaveBeenCalledWith(
+        'binance.disconnected',
+        expect.objectContaining({ symbols: ['BTCUSDT'] }),
+      );
+    });
   });
 });
