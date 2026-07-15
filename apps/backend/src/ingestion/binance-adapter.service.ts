@@ -76,13 +76,14 @@ export class BinanceAdapterService
     return this.rateLimitState;
   }
 
-  async disconnect(): Promise<void> {
+  disconnect(): Promise<void> {
     this.manuallyClosed = true;
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
     this.connected = false;
+    return Promise.resolve();
   }
 
   /**
@@ -221,7 +222,10 @@ export class BinanceAdapterService
     marketType: StreamSubscription['marketType'],
   ): Promise<SymbolInfo[]> {
     const baseUrl = this.config.get('BINANCE_REST_BASE_URL', { infer: true });
-    const path = marketType === 'futures' ? '/fapi/v1/exchangeInfo' : '/api/v3/exchangeInfo';
+    const path =
+      marketType === 'futures'
+        ? '/fapi/v1/exchangeInfo'
+        : '/api/v3/exchangeInfo';
 
     const res = await fetch(`${baseUrl}${path}`);
     this.trackRateLimitFromHeaders(res.headers);
@@ -251,7 +255,8 @@ export class BinanceAdapterService
     endTime: Date;
   }): Promise<MarketEvent[]> {
     const baseUrl = this.config.get('BINANCE_REST_BASE_URL', { infer: true });
-    const path = params.marketType === 'futures' ? '/fapi/v1/klines' : '/api/v3/klines';
+    const path =
+      params.marketType === 'futures' ? '/fapi/v1/klines' : '/api/v3/klines';
 
     const url = new URL(`${baseUrl}${path}`);
     url.searchParams.set('symbol', params.symbol);

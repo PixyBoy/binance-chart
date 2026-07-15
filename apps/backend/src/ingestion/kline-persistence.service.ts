@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { NormalizedKline } from '@trading-backend/exchange-adapters';
-import { MarketType as PrismaMarketType } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
 
 /**
@@ -28,14 +27,14 @@ export class KlinePersistenceService {
       where: {
         exchange_marketType_symbol_openTime: {
           exchange: kline.exchange,
-          marketType: kline.marketType as PrismaMarketType,
+          marketType: kline.marketType,
           symbol: kline.symbol,
           openTime: kline.openTime,
         },
       },
       create: {
         exchange: kline.exchange,
-        marketType: kline.marketType as PrismaMarketType,
+        marketType: kline.marketType,
         symbol: kline.symbol,
         openTime: kline.openTime,
         closeTime: kline.closeTime,
@@ -60,13 +59,13 @@ export class KlinePersistenceService {
       where: {
         exchange_marketType_symbol: {
           exchange: kline.exchange,
-          marketType: kline.marketType as PrismaMarketType,
+          marketType: kline.marketType,
           symbol: kline.symbol,
         },
       },
       create: {
         exchange: kline.exchange,
-        marketType: kline.marketType as PrismaMarketType,
+        marketType: kline.marketType,
         symbol: kline.symbol,
         lastCloseTime: kline.closeTime,
       },

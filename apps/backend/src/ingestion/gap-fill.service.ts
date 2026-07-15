@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EXCHANGE_ADAPTER } from '@trading-backend/exchange-adapters';
 import type { IExchangeAdapter } from '@trading-backend/exchange-adapters';
-import { MarketType as PrismaMarketType } from '@prisma/client';
+
 import { PrismaService } from '../common/prisma/prisma.service';
 import { KlineBufferService } from './kline-buffer.service';
 import {
@@ -54,7 +54,7 @@ export class GapFillService {
       where: {
         exchange_marketType_symbol: {
           exchange: 'binance',
-          marketType: marketType as PrismaMarketType,
+          marketType: marketType,
           symbol,
         },
       },

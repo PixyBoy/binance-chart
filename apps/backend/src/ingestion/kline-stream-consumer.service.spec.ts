@@ -54,7 +54,10 @@ describe('KlineStreamConsumerService', () => {
       isClosed: true,
     };
 
-    await (service as any).handleEntry('1-1', ['payload', JSON.stringify(kline)]);
+    await (service as any).handleEntry('1-1', [
+      'payload',
+      JSON.stringify(kline),
+    ]);
 
     expect(persistenceMock.persistKline).toHaveBeenCalledTimes(1);
     expect(redisMock.xack).toHaveBeenCalledWith(
@@ -81,13 +84,20 @@ describe('KlineStreamConsumerService', () => {
       isClosed: true,
     };
 
-    await (service as any).handleEntry('1-2', ['payload', JSON.stringify(kline)]);
+    await (service as any).handleEntry('1-2', [
+      'payload',
+      JSON.stringify(kline),
+    ]);
 
     expect(redisMock.xack).not.toHaveBeenCalled();
   });
 
   it('creates the consumer group on init and tolerates BUSYGROUP if it already exists', async () => {
-    redisMock.xgroup.mockRejectedValueOnce(new Error('BUSYGROUP already exists'));
-    await expect((service as any).ensureConsumerGroup()).resolves.toBeUndefined();
+    redisMock.xgroup.mockRejectedValueOnce(
+      new Error('BUSYGROUP already exists'),
+    );
+    await expect(
+      (service as any).ensureConsumerGroup(),
+    ).resolves.toBeUndefined();
   });
 });
