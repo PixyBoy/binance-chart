@@ -6,7 +6,8 @@ providers:
     folder: ""
     type: file
     disableDeletion: false
-    updateIntervalSeconds: 30
+    editable: true
+    updateIntervalSeconds: 10
     options:
-      # TODO: drop exported dashboard JSON files here in Fase 5
+      # TODO: drop exported dashboard JSON files here
       path: /etc/grafana/provisioning/dashboards

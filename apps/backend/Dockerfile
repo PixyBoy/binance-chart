@@ -12,6 +12,8 @@ COPY packages ./packages
 # ---------- Development ----------
 FROM base AS development
 ENV NODE_ENV=development
+
+RUN apk add --no-cache openssl
 RUN pnpm install --frozen-lockfile || pnpm install
 COPY apps/backend ./apps/backend
 RUN pnpm --filter @trading-backend/exchange-adapters build
