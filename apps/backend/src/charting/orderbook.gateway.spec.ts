@@ -36,7 +36,7 @@ describe('OrderbookGateway', () => {
         symbol: 'BTCUSDT',
         timestamp: Date.now(),
       }),
-    } as any;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -76,10 +76,16 @@ describe('OrderbookGateway', () => {
     await gateway.handleSubscribe(a, { symbol: 'BTCUSDT', marketType: 'spot' });
     await gateway.handleSubscribe(b, { symbol: 'BTCUSDT', marketType: 'spot' });
 
-    await gateway.handleUnsubscribe(a, { symbol: 'BTCUSDT', marketType: 'spot' });
+    await gateway.handleUnsubscribe(a, {
+      symbol: 'BTCUSDT',
+      marketType: 'spot',
+    });
     expect(redisSubMock.unsubscribe).not.toHaveBeenCalled();
 
-    await gateway.handleUnsubscribe(b, { symbol: 'BTCUSDT', marketType: 'spot' });
+    await gateway.handleUnsubscribe(b, {
+      symbol: 'BTCUSDT',
+      marketType: 'spot',
+    });
     expect(redisSubMock.unsubscribe).toHaveBeenCalledWith(
       obChannel('binance', 'spot', 'BTCUSDT'),
     );

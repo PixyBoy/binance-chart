@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { OrderbookPublisherService, obChannel } from './orderbook-publisher.service';
+import {
+  OrderbookPublisherService,
+  obChannel,
+} from './orderbook-publisher.service';
 import { REDIS_CLIENT } from '../common/redis/redis.constants';
 import type { NormalizedOrderBook } from '@trading-backend/exchange-adapters';
 

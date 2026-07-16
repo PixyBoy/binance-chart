@@ -7,6 +7,7 @@ import { ConfigModule } from './common/config/config.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { RedisModule } from './common/redis/redis.module';
 import { ChartingModule } from './charting/charting.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ChartingModule } from './charting/charting.module';
     EventEmitterModule.forRoot(),
     IngestionModule,
     ChartingModule,
+    MonitoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],
