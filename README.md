@@ -57,7 +57,7 @@ touching the server.
 
 ## Current phase
 
-Fase 1–3 complete and merged to main.
+Fase 1–4 complete and merged to main.
 
 **Fase 1:** Exchange adapter interface, BinanceAdapter, 1m kline ingestion for
 BTCUSDT/ETHUSDT/BNBUSDT, TimescaleDB storage with continuous aggregates for
@@ -78,8 +78,14 @@ subscribed clients via refcounted Redis Pub/Sub — no auth yet, scales to
 thousands of symbols and clients. Chart output format abstracted via
 `IChartDataFormatter` interface, currently `LightweightChartsFormatterService`.
 Swapping to TradingView Charting Library later means adding one formatter class
-and changing one DI binding — zero impact on the rest of the app. 46/46 tests
+and changing one DI binding — zero impact on the rest of the app. 61/61 tests
 pass, 0 lint errors.
+
+**Fase 4:** Order book depth20 stream via `connectOrderBookStream()` (independent
+from klines), persisted in Redis as snapshots (5min TTL) for fast client
+reconnect. `OrderbookGateway` broadcasts snapshots via Socket.IO with same
+refcounted subscription model as klines. `OrderbookFormatterService` matches
+lightweight-charts shape (ready for UDF later). 61 tests, 0 errors.
 
 ## Next phases
 
