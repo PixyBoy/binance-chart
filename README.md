@@ -57,7 +57,7 @@ touching the server.
 
 ## Current phase
 
-Fase 1–4 complete and merged to main.
+Fase 1–5 complete and merged to main.
 
 **Fase 1:** Exchange adapter interface, BinanceAdapter, 1m kline ingestion for
 BTCUSDT/ETHUSDT/BNBUSDT, TimescaleDB storage with continuous aggregates for
