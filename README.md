@@ -57,14 +57,45 @@ touching the server.
 
 ## Current phase
 
-Fase 1: Exchange adapter interface, BinanceAdapter, 1m kline ingestion for
+Fase 1–3 complete and merged to main.
+
+**Fase 1:** Exchange adapter interface, BinanceAdapter, 1m kline ingestion for
 BTCUSDT/ETHUSDT/BNBUSDT, TimescaleDB storage with continuous aggregates for
 higher timeframes, unit tests alongside each piece.
 
-Fase 2: Durable Redis Stream buffer between ingestion and persistence
-(`KlineBufferService` -> `KlineStreamConsumerService`), so a slow/failing
+**Fase 2:** Durable Redis Stream buffer between ingestion and persistence
+(`KlineBufferService` → `KlineStreamConsumerService`), so a slow/failing
 DB write never blocks the Binance connection or loses data. Exponential
 backoff on reconnect. `GapFillService` automatically backfills any gap
 between the last persisted candle and now whenever the connection is
 restored, using the exact same durable path as live data — zero data
-loss across a disconnect, as required. 23 unit tests covering all of it.
+loss across a disconnect, as required.
+
+**Fase 3:** REST historical API (`GET /klines?symbol=...&timeframe=...`) returns
+formatted candles from TimescaleDB continuous aggregates. WebSocket Gateway
+(`ChartGateway`, Socket.IO) delivers live 1m candles (forming + closed) to
+subscribed clients via refcounted Redis Pub/Sub — no auth yet, scales to
+thousands of symbols and clients. Chart output format abstracted via
+`IChartDataFormatter` interface, currently `LightweightChartsFormatterService`.
+Swapping to TradingView Charting Library later means adding one formatter class
+and changing one DI binding — zero impact on the rest of the app. 46/46 tests
+pass, 0 lint errors.
+
+## Next phases
+
+**Fase 4:** Order book (depth 20) stream via WebSocket (`@depth20` Binance stream),
+persisted in Redis as a snapshot. Clients subscribe to OrderBook events.
+
+**Fase 5:** Prometheus metrics + Pino structured logging. Per-process load,
+subscriber counts, Binance rate-limit tracking, DB write latency, queue depth.
+
+**Fase 6:** k6 load testing (combined ingestion + client subscriber scenarios).
+Rate limiter tuning for Binance API. VPS final sizing based on observed Grafana data.
+
+**Fase 7:** Full Binance symbol list rollout (currently hardcoded: BTCUSDT/ETHUSDT/BNBUSDT).
+DB-driven subscription management (add/remove symbols via API, persist in config).
+
+**Backlog:**
+- User auth & API key management
+- Order placement + account balance (out of scope for v1 charting-only backend, but planned)
+- Multi-exchange abstraction (add Kraken/Coinbase adapters, re-use the same Ingestion→Charting pipeline)
