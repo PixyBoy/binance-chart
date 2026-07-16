@@ -5,20 +5,24 @@ import type {
   MarketType,
 } from '@trading-backend/exchange-adapters';
 import { KlineBufferService } from './kline-buffer.service';
+import { LiveKlinePublisherService } from './live-kline-publisher.service';
 
 /**
- * Subscribes to the live 1m kline stream and forwards every event
- * straight into the durable Redis buffer (KlineBufferService). This
- * service intentionally does NOT talk to Postgres directly — persistence
- * is handled asynchronously by KlineStreamConsumerService, so a slow or
- * momentarily failing DB can never block or drop live Binance data.
+ * Subscribes to the live 1m kline stream and fans it out two ways:
+ *   1. KlineBufferService — durable Redis Stream buffer, drained by
+ *      KlineStreamConsumerService into Postgres. Guarantees no data loss.
+ *   2. LiveKlinePublisherService — best-effort Redis Pub/Sub broadcast
+ *      straight to connected WebSocket clients (ChartGateway), including
+ *      still-forming (unclosed) candles for a live-updating chart.
+ * These are independent: a slow/failing DB never delays live delivery,
+ * and a quiet WebSocket audience never affects persistence.
  */
 @Injectable()
 export class KlineIngestionService implements OnModuleInit {
   private readonly logger = new Logger(KlineIngestionService.name);
 
   // TODO: move to config/DB-driven symbol list once subscription
-  // management (Fase 3) exists. Hardcoded here only for early bring-up.
+  // management exists. Hardcoded here only for early bring-up.
   private readonly symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'];
   private readonly marketType: MarketType = 'spot';
 
@@ -26,6 +30,7 @@ export class KlineIngestionService implements OnModuleInit {
     @Inject(EXCHANGE_ADAPTER)
     private readonly exchangeAdapter: IExchangeAdapter,
     private readonly buffer: KlineBufferService,
+    private readonly livePublisher: LiveKlinePublisherService,
   ) {}
 
   onModuleInit(): void {
@@ -45,6 +50,10 @@ export class KlineIngestionService implements OnModuleInit {
     });
 
     for await (const event of stream) {
+      // Live delivery is independent of persistence — one failing must
+      // never block the other.
+      void this.livePublisher.publish(event);
+
       try {
         await this.buffer.push(event);
       } catch (err) {

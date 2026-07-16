@@ -6,6 +6,7 @@ import { KlineBufferService } from './kline-buffer.service';
 import { KlinePersistenceService } from './kline-persistence.service';
 import { KlineStreamConsumerService } from './kline-stream-consumer.service';
 import { GapFillService } from './gap-fill.service';
+import { LiveKlinePublisherService } from './live-kline-publisher.service';
 
 /**
  * The only place in the app that binds an interface (EXCHANGE_ADAPTER) to
@@ -32,6 +33,7 @@ import { GapFillService } from './gap-fill.service';
     KlinePersistenceService,
     KlineStreamConsumerService,
     GapFillService,
+    LiveKlinePublisherService,
   ],
   exports: [EXCHANGE_ADAPTER],
 })

@@ -6,6 +6,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { ConfigModule } from './common/config/config.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { RedisModule } from './common/redis/redis.module';
+import { ChartingModule } from './charting/charting.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { RedisModule } from './common/redis/redis.module';
     RedisModule,
     EventEmitterModule.forRoot(),
     IngestionModule,
+    ChartingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
