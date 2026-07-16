@@ -10,6 +10,7 @@ import WebSocket from 'ws';
 import type {
   IExchangeAdapter,
   MarketEvent,
+  OrderBookEvent,
   RateLimitState,
   StreamSubscription,
   SymbolInfo,
@@ -301,5 +302,121 @@ export class BinanceAdapterService
         windowResetAt: new Date(Date.now() + 60_000),
       };
     }
+  }
+
+  /**
+   * Opens a combined-stream WebSocket connection for order book depth snapshots
+   * and yields normalized order book events as they arrive. Independent from
+   * connectStream() — each can fail or reconnect without affecting the other.
+   * WARNING: do not call both connectStream() and connectOrderBookStream() on
+   * the same instance concurrently; they share state (this.ws). Use separate
+   * instances if both are needed simultaneously.
+   */
+  async *connectOrderBookStream(
+    subscription: StreamSubscription,
+  ): AsyncIterable<OrderBookEvent> {
+    const streams = subscription.symbols
+      .map((symbol) => `${symbol.toLowerCase()}@depth20`)
+      .join('/');
+
+    const baseUrl = this.config.get('BINANCE_WS_BASE_URL', { infer: true });
+    const url = `${baseUrl}/stream?streams=${streams}`;
+
+    const queue: OrderBookEvent[] = [];
+    let resolveNext: (() => void) | null = null;
+
+    const maxBackoffMs = 30_000;
+    const nextBackoffMs = () =>
+      Math.min(1000 * 2 ** this.reconnectAttempt, maxBackoffMs);
+
+    const connect = () => {
+      this.logger.log(`Connecting to Binance depth stream: ${url}`);
+      this.ws = new WebSocket(url);
+
+      this.ws.on('open', () => {
+        this.connected = true;
+        this.reconnectAttempt = 0;
+        this.logger.log('Binance depth WebSocket connected');
+      });
+
+      this.ws.on('message', (raw: Buffer) => {
+        try {
+          const parsed = JSON.parse(raw.toString());
+          const event = this.normalizeDepthMessage(
+            parsed,
+            subscription.marketType,
+          );
+          if (event) {
+            queue.push(event);
+            resolveNext?.();
+          }
+        } catch (err) {
+          this.logger.error(
+            'Failed to parse Binance depth message',
+            err as Error,
+          );
+        }
+      });
+
+      this.ws.on('close', () => {
+        this.connected = false;
+        const delay = nextBackoffMs();
+        this.reconnectAttempt += 1;
+        this.logger.warn(
+          `Binance depth WebSocket disconnected, reconnecting in ${delay}ms (attempt ${this.reconnectAttempt})`,
+        );
+        setTimeout(connect, delay);
+      });
+
+      this.ws.on('error', (err) => {
+        this.logger.error('Binance depth WebSocket error', err);
+      });
+    };
+
+    connect();
+
+    while (true) {
+      if (queue.length === 0) {
+        await new Promise<void>((resolve) => {
+          resolveNext = resolve;
+        });
+      }
+      const next = queue.shift();
+      if (next) {
+        yield next;
+      }
+    }
+  }
+
+  private normalizeDepthMessage(
+    parsed: any,
+    marketType: StreamSubscription['marketType'],
+  ): OrderBookEvent | null {
+    const data = parsed?.data;
+    if (!data) return null;
+
+    const symbol = String(data.s).toUpperCase();
+    const bids = (data.b ?? []) as Array<[string | number, string | number]>;
+    const asks = (data.a ?? []) as Array<[string | number, string | number]>;
+
+    if (!bids.length || !asks.length) return null;
+
+    return {
+      type: 'orderbook',
+      payload: {
+        exchange: this.exchangeId,
+        marketType,
+        symbol,
+        timestamp: new Date(),
+        bids: bids.slice(0, 20).map(([price, qty]) => ({
+          price: String(price),
+          quantity: String(qty),
+        })),
+        asks: asks.slice(0, 20).map(([price, qty]) => ({
+          price: String(price),
+          quantity: String(qty),
+        })),
+      },
+    };
   }
 }

@@ -7,6 +7,9 @@ import { KlinePersistenceService } from './kline-persistence.service';
 import { KlineStreamConsumerService } from './kline-stream-consumer.service';
 import { GapFillService } from './gap-fill.service';
 import { LiveKlinePublisherService } from './live-kline-publisher.service';
+import { OrderbookPublisherService } from './orderbook-publisher.service';
+import { OrderbookIngestionService } from './orderbook-ingestion.service';
+import { OrderbookSnapshotService } from './orderbook-snapshot.service';
 
 /**
  * The only place in the app that binds an interface (EXCHANGE_ADAPTER) to
@@ -34,7 +37,10 @@ import { LiveKlinePublisherService } from './live-kline-publisher.service';
     KlineStreamConsumerService,
     GapFillService,
     LiveKlinePublisherService,
+    OrderbookPublisherService,
+    OrderbookSnapshotService,
+    OrderbookIngestionService,
   ],
-  exports: [EXCHANGE_ADAPTER],
+  exports: [EXCHANGE_ADAPTER, OrderbookSnapshotService],
 })
 export class IngestionModule {}

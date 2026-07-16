@@ -1,17 +1,19 @@
 import { Module } from '@nestjs/common';
+import { IngestionModule } from '../ingestion/ingestion.module';
 import { CHART_FORMATTER } from './chart-formatter.interface';
 import { KlineQueryService } from './kline-query.service';
 import { LightweightChartsFormatterService } from './lightweight-charts-formatter.service';
 import { KlinesController } from './klines.controller';
 import { ChartGateway } from './chart.gateway';
+import { OrderbookFormatterService } from './orderbook-formatter.service';
+import { OrderbookGateway } from './orderbook.gateway';
 
 /**
- * The only place that binds the chart output format to a concrete
- * implementation. Switching from lightweight-charts to a TradingView
- * Charting Library UDF response later means adding a new formatter class
- * and changing only the `useClass` line below.
+ * The charting layer with format adapters for multiple chart libraries and
+ * real-time WebSocket gateways for both klines and order books.
  */
 @Module({
+  imports: [IngestionModule],
   providers: [
     KlineQueryService,
     LightweightChartsFormatterService,
@@ -20,6 +22,8 @@ import { ChartGateway } from './chart.gateway';
       useClass: LightweightChartsFormatterService,
     },
     ChartGateway,
+    OrderbookFormatterService,
+    OrderbookGateway,
   ],
   controllers: [KlinesController],
 })

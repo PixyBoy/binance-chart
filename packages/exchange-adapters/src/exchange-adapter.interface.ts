@@ -4,6 +4,7 @@ import {
   StreamSubscription,
   SymbolInfo,
 } from './types';
+import type { OrderBookEvent } from './types';
 
 /**
  * Contract every exchange integration (Binance today, others later) must
@@ -26,6 +27,15 @@ export interface IExchangeAdapter {
    * instead of exceptions.
    */
   connectStream(subscription: StreamSubscription): AsyncIterable<MarketEvent>;
+
+  /**
+   * Opens (or reuses) a live connection and starts emitting normalized
+   * order book events (depth snapshots). Independent from connectStream().
+   * Binance sends depth updates at ~1000ms intervals (@depth20 stream).
+   */
+  connectOrderBookStream(
+    subscription: StreamSubscription,
+  ): AsyncIterable<OrderBookEvent>;
 
   /** Gracefully closes the underlying connection(s). */
   disconnect(): Promise<void>;

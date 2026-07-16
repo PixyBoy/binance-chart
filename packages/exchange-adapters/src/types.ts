@@ -51,6 +51,11 @@ export type MarketEvent =
   | { type: 'kline'; payload: NormalizedKline }
   | { type: 'orderbook'; payload: NormalizedOrderBook };
 
+export type OrderBookEvent = {
+  type: 'orderbook';
+  payload: NormalizedOrderBook;
+};
+
 /** Current known state of an exchange's rate limit budget. */
 export interface RateLimitState {
   exchange: string;
